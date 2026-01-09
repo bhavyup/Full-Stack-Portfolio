@@ -1,0 +1,137 @@
+--- a/ExperienceSection.jsx
++++ b/ExperienceSection.jsx
+@@ -1,5 +1,6 @@
+ ("use client");
+ 
++/* eslint-disable react-hooks/exhaustive-deps */
+ import React, { useEffect, useMemo, useRef, useState } from "react";
+ import * as THREE from "three";
+ import { Canvas, useThree, useFrame } from "@react-three/fiber";
+@@ -53,10 +54,17 @@ const RollerCoasterTimeline3D = React.memo(function RollerCoasterTimeline3D({
+   const containerRef = useRef(null);
+   const pMV = useMotionValue(0); // progress 0..1
+   const [p, setP] = useState(0);
+-  useEffect(() => {
+-    const unsub = pMV.on("change", (v) => setP(THREE.MathUtils.clamp(v, 0, 1)));
+-    return () => unsub?.();
+-  }, [pMV]);
++  // Throttle React re-renders: only update state when value changes noticeably
++  useEffect(() => {
++    let last = -1;
++    const unsub = pMV.on("change", (v) => {
++      const nv = THREE.MathUtils.clamp(v, 0, 1);
++      if (Math.abs(nv - last) < 0.001) return;
++      last = nv;
++      setP(nv);
++    });
++    return () => unsub?.();
++  }, []);
+   // Virtual scroll: page doesn't move; wheel/touch drives progress with inertia
+   useEffect(() => {
+     const el = containerRef.current;
+@@ -65,19 +73,26 @@ const RollerCoasterTimeline3D = React.memo(function RollerCoasterTimeline3D({
+     el.style.overscrollBehavior = "contain";
+     el.style.touchAction = "none";
+     let v = 0;
+-    const friction = 0.9;
++    const friction = 0.9; // per-frame at 60fps; we'll exponentiate with dt
+     const maxV = 0.02;
+     let raf = 0;
+ 
+-    const step = () => {
+-      v *= friction;
+-      if (Math.abs(v) > 0.00001) pMV.set(pMV.get() + v);
+-      raf = requestAnimationFrame(step);
+-    };
+-    raf = requestAnimationFrame(step);
++    let lastT = performance.now();
++    const step = (t) => {
++      const dt = Math.min(0.05, (t - lastT) / 1000 || 0); // cap dt at 50ms
++      lastT = t;
++      // dt-stable damping and integration
++      v *= Math.pow(friction, dt * 60);
++      if (Math.abs(v) > 1e-6) {
++        const cur = pMV.get();
++        const next = THREE.MathUtils.clamp(cur + v * dt * 60, 0, 1);
++        if (next === 0 || next === 1) v = 0; // stop at ends
++        pMV.set(next);
++      }
++      raf = requestAnimationFrame(step);
++    };
++    raf = requestAnimationFrame(step);
+ 
+     const onWheel = (e) => {
+       e.preventDefault();
+       v += THREE.MathUtils.clamp(e.deltaY * wheelSpeed, -maxV, maxV);
+@@ -242,6 +257,10 @@ const Scene = React.memo(function Scene({
+     () => new THREE.CatmullRomCurve3(rightPts, false, "centripetal", 0.2),
+     [rightPts]
+   );
++  // Precompute rail polyline once (avoid getPoints() every render)
++  const leftRailPoints = useMemo(
++    () => leftCurve.getPoints(1000),
++    [leftCurve]
++  );
+ 
+   // Sleepers every ~2.2 units
+   const sleepers = useMemo(
+@@ -330,7 +349,7 @@ const Scene = React.memo(function Scene({
+ 
+       {/* Glow trail (left rail) */}
+       <GlowTrail
+-        points={leftCurve.getPoints(1000)}
++        points={leftRailPoints}
+         pMV={pMV}
+         color={neon}
+       />
+@@ -374,11 +393,12 @@ const Scene = React.memo(function Scene({
+             {/* anchored card */}
+             <Html
+               position={[m.anchor.x, m.anchor.y, m.anchor.z]}
+               transform
+-              occlude={[leftrailsRef, rightrailsRef, groupRef]}
++              // Avoid heavy rail raycasts; occlude until passed, then stop raycasting
++              occlude={!passed}
+               distanceFactor={6}
+               pointerEvents="auto"
+             >
+               <Card data={m} active={active} passed={passed} neon={neon} />
+             </Html>
+           </group>
+         );
+       })}
+@@ -498,6 +518,7 @@ function Sleepers({ sleepers, glowCount, neon }) {
+   const base = useMemo(() => new THREE.Color("#a0a4aa"), []);
+   const glow = useMemo(() => new THREE.Color(neon), [neon]);
+   const prev = useRef(0);
++  const bigSphere = useMemo(() => new THREE.Sphere(new THREE.Vector3(0, 0, 0), 1000), []);
+ 
+   // Build transforms once
+   useEffect(() => {
+@@ -515,6 +536,10 @@ function Sleepers({ sleepers, glowCount, neon }) {
+       ref.current.setColorAt(i, base);
+     }
+     ref.current.instanceMatrix.needsUpdate = true;
+     if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true;
++    // Prevent frustum culling popping (instanced bounds don't include instances)
++    if (ref.current.geometry) {
++      ref.current.geometry.boundingSphere = bigSphere;
++    }
+     prev.current = 0;
+   }, [sleepers, base]);
+ 
+@@ -536,10 +561,11 @@ function Sleepers({ sleepers, glowCount, neon }) {
+ 
+   return (
+     <instancedMesh
+       ref={ref}
+       args={[null, null, sleepers.length]}
++      frustumCulled={false}
+       castShadow
+       receiveShadow
+     >
+       <boxGeometry args={[1, 1, 1]} />
+       <meshStandardMaterial metalness={0.2} roughness={0.6} />
+     </instancedMesh>
+   );
+ }

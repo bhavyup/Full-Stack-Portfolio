@@ -1,55 +1,74 @@
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 from enum import Enum
 
-# Profile Models
 class ProfileBase(BaseModel):
     name: str
     headline: str
     bio: str
+    role: str
     highlights: str
     profileImage: str
     email: EmailStr
     linkedin: str
-    location: str = "Odisha, India"
-    resume_url: Optional[str] = None
+    instagram: str
+    github: str
+    telegram: str
+    location: str = "Nainital, Uttarakhand, India"
+    resume_url: Optional[str] 
+    hero_title: str = "STATUS: ONLINE"
+    hero_lines: List[str]
+    skills_primary: List[str] = []
+    chipCount: int = 8
+
 
 class Profile(ProfileBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+
 
 class Skill(BaseModel):
     name: str
     proficiency: int = Field(..., ge=0, le=100)
 
-# Skills Models
+
 class SkillsBase(BaseModel):
     category: str
     skills: List[Skill]
 
+
 class Skills(SkillsBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
-# Projects Models
+
 class ProjectBase(BaseModel):
     title: str
     description: str
-    status: str  # 'completed', 'coming-soon'
+    status: str  # e.g. 'completed', 'coming-soon'
     image: str
     liveUrl: Optional[str] = None
     githubUrl: Optional[str] = None
     technologies: List[str] = []
+    year: Optional[int] = None
+    
+
 
 class Project(ProjectBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+   
 
 class ProjectCreate(ProjectBase):
     pass
+
 
 class ProjectUpdate(BaseModel):
     title: Optional[str] = None
@@ -59,47 +78,122 @@ class ProjectUpdate(BaseModel):
     liveUrl: Optional[str] = None
     githubUrl: Optional[str] = None
     technologies: Optional[List[str]] = None
+    year: Optional[int] = None
+    
+class ProjectsPage(BaseModel):
+    id: str = Field(default="projects_page_main", alias="_id")
+    header: Optional[str]
+    subtitle: Optional[str]
+    tip: Optional[str]
+    
+class ProjectsPageUpdate(BaseModel):
+    header: Optional[str]
+    subtitle: Optional[str]
+    tip: Optional[str]
 
-# Education Models
 class EducationBase(BaseModel):
     degree: str
+    program: str
     institution: str
+    university: str
+    location: str
+    start: Optional[str] = None
+    end: Optional[str] = None
     year: str
+    gpa: Optional[str] = None
     progress: int = 75  # percentage
+    achievements: List[str] = []
+    coursework: List[str] = []
+    link: Optional[str] = None
+    logo: Optional[str] = None
+    verified: bool = False
+    type: Optional[str] = None
+    
+
 
 class Education(EducationBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    
+class EducationCreate(EducationBase):
+    pass
 
-# Experience Models
+class EducationUpdate(BaseModel):
+    degree: Optional[str] = None
+    program: Optional[str] = None
+    institution: Optional[str] = None
+    university: Optional[str] = None
+    location: Optional[str] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+    year: Optional[str] = None
+    gpa: Optional[str] = None
+    progress: Optional[int] = None
+    achievements: Optional[List[str]] = None
+    coursework: Optional[List[str]] = None
+    link: Optional[str] = None
+    logo: Optional[str] = None
+    verified: Optional[bool] = None
+    type: Optional[str] = None
+
+
 class Goal(BaseModel):
     title: str
     description: str
 
+
 class ExperienceBase(BaseModel):
-    main_title: str
-    main_message: str
-    goals: List[Goal]
-    cta_title: str
-    cta_message: str
+    role: str
+    company: str
+    location: str
+    start: Optional[str] = None
+    end: Optional[str] = None
+    bullets: List[str] = None
+    technologies: List[str] = []
+    type: Optional[str] = None  # e.g. 'work', 'internship', 'volunteering'
+    logo: Optional[str] = None
+    t: Optional[float] = None  # position on the track for 3D timeline
+    description: Optional[str] = None  # Added description field
 
 class Experience(ExperienceBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    
+class ExperienceCreate(ExperienceBase):
+    pass
 
-# Learning Journey Models
+class ExperienceUpdate(BaseModel):
+    role: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    start: Optional[str] = None
+    end: Optional[str] = None
+    bullets: Optional[List[str]] = None
+    technologies: Optional[List[str]] = None
+    type: Optional[str] = None
+    logo: Optional[str] = None
+    t: Optional[float] = None
+    description: Optional[str] = None  # Added description field
+
+
 class LearningJourneyBase(BaseModel):
     phase: str
     skills: List[str]
-    status: str  # 'completed', 'in-progress', 'planned'
+    status: str  # e.g. 'completed', 'in-progress', 'planned'
     order: int
+
 
 class LearningJourney(LearningJourneyBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+
 
 class LearningJourneyCreate(LearningJourneyBase):
     pass
+
 
 class LearningJourneyUpdate(BaseModel):
     phase: Optional[str] = None
@@ -107,23 +201,28 @@ class LearningJourneyUpdate(BaseModel):
     status: Optional[str] = None
     order: Optional[int] = None
 
+
 class GrowthMindsetBase(BaseModel):
     title: str
     quote: str
 
+
 class GrowthMindset(GrowthMindsetBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
-# Experiments Models
+
 class ExperimentItem(BaseModel):
     title: str
     description: str
     status: str
 
+
 class InnovationLabFeature(BaseModel):
     title: str
     description: str
+
 
 class ExperimentsSectionData(BaseModel):
     header_title: str
@@ -133,16 +232,19 @@ class ExperimentsSectionData(BaseModel):
     lab_features: List[InnovationLabFeature]
     experiments: List[ExperimentItem]
 
+
 class ExperimentsSectionDB(ExperimentsSectionData):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
-# Contact Models
+
 class ContactLink(BaseModel):
-    name: str  # e.g., "Email", "LinkedIn"
-    value: str # e.g., "test@test.com", "linkedin.com/in/..."
-    icon: str  # e.g., "Mail", "Linkedin" - we'll use this on the frontend
+    name: str  # e.g. "Email", "LinkedIn"
+    value: str  # e.g. "test@test.com", "linkedin.com/in/..."
+    icon: str  # e.g. "Mail", "Linkedin"
     color: str
+
 
 class ContactSectionData(BaseModel):
     header_title: str
@@ -153,26 +255,34 @@ class ContactSectionData(BaseModel):
     get_in_touch_description: str
     contact_links: List[ContactLink]
 
+
 class ContactSectionDB(ContactSectionData):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+
 
 class ContactMessageBase(BaseModel):
     name: str
     email: EmailStr
     message: str
 
+
 class ContactMessage(ContactMessageBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     read: bool = False
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+
 
 class ContactMessageCreate(ContactMessageBase):
     pass
 
+
 class FooterLink(BaseModel):
     name: str
     href: str
+
 
 class FooterData(BaseModel):
     brand_name: str
@@ -182,10 +292,13 @@ class FooterData(BaseModel):
     connect_description: str
     bottom_text: str
 
+
 class FooterDB(FooterData):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
-    
+    updatedAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+
+
 class NotificationType(str, Enum):
     INFO = "info"
     SUCCESS = "success"
@@ -195,25 +308,33 @@ class NotificationType(str, Enum):
     USER = "user"
     UPDATE = "update"
     SECURITY = "security"
+    CREATE = "create"
+    DELETE = "delete"
+
 
 class NotificationBase(BaseModel):
     message: str
     read: bool = False
     type: NotificationType = NotificationType.INFO
 
+
 class Notification(NotificationBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
-# Admin Models
+
 class AdminBase(BaseModel):
     username: str
     name: Optional[str] = None
     profileImage: Optional[str] = None
 
+
 class Admin(AdminBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+
 
 class AdminCreate(BaseModel):
     username: str
@@ -221,29 +342,34 @@ class AdminCreate(BaseModel):
     name: str
     profileImage: str
 
+
 class AdminLogin(BaseModel):
     username: str
     password: str
+
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-# Response Models
+
 class APIResponse(BaseModel):
     success: bool
     message: str
     data: Optional[dict] = None
+
 
 class ListResponse(BaseModel):
     success: bool
     message: str
     data: List[dict]
     total: int
-    
+
+
 class AdminProfileResponse(BaseModel):
     username: str
     name: str

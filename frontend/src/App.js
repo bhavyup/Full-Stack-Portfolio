@@ -1,21 +1,39 @@
-import React from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import { Toaster } from "./components/ui/toaster";
 
 // Components for the main portfolio page
-import SpaceBackground from "./components/SpaceBackground";
-import HeroSection from "./components/HeroSection";
-import AboutSection from "./components/AboutSection";
-import SkillsSection from "./components/SkillsSection";
-import ProjectsSection from "./components/ProjectsSection";
-import EducationSection from "./components/EducationSection";
-import ExperienceSection from "./components/ExperienceSection";
-import LearningJourneySection from "./components/LearningJourneySection";
-import ExperimentsSection from "./components/ExperimentsSection";
-import ContactSection from "./components/ContactSection";
-import Footer from "./components/Footer";
-import Chatbot from "./components/Chatbot";
+const AboutSection = lazy(() =>
+  import(/*webpackPrefetch: true*/ "./components/AboutSection")
+);
+const ProjectsSection = lazy(() =>
+  import(/*webpackPrefetch: true*/ "./components/ProjectsSection")
+);
+const EducationSection = lazy(() =>
+  import(/*webpackPrefetch: true*/ "./components/EducationSection")
+);
+const LearningJourneySection = lazy(() =>
+  import(/*webpackPrefetch: true*/ "./components/LearningJourneySection")
+);
+const ExperimentsSection = lazy(() =>
+  import(/*webpackPrefetch: true*/ "./components/ExperimentsSection")
+);
+const ContactSection = lazy(() =>
+  import(/*webpackPrefetch: true*/ "./components/ContactSection")
+);
+const Footer = lazy(() =>
+  import(/*webpackPrefetch: true*/ "./components/Footer")
+);
+const Test = lazy(() => import(/*webpackPrefetch: true*/ "./components/Test"));
+import Home from "./pages/Home";
+import PortfolioLayout from "./pages/Portfolio";
 
 // --- Components for the Admin Panel ---
 import Login from "./components/Admin/Login";
@@ -35,47 +53,106 @@ import FooterManager from "./components/Admin/FooterManager";
 import AdminManager from "./components/Admin/AdminManager";
 import SearchResults from "./components/Admin/SearchResults";
 import MessagePopover from "./components/Admin/MessageDropDown";
-
-// --- THIS IS THE CRITICAL FIX ---
-// Import the AdminProvider from the context file we created
 import { AdminProvider } from "./context/AdminContext";
-// --- END OF FIX ---
 
-// This is the component for your main, public-facing portfolio page.
-const Portfolio = () => {
-  return (
-    <div className="min-h-screen bg-slate-900 text-white relative overflow-x-hidden">
-      {/* Space Background */}
-      <SpaceBackground />
+// (prefetch below keeps first navigation snappy)
 
-      {/* Main Content */}
-      <div className="relative z-10">
-        <HeroSection />
-        <AboutSection />
-        <SkillsSection />
-        <ProjectsSection />
-        <EducationSection />
-        <ExperienceSection />
-        <LearningJourneySection />
-        <ExperimentsSection />
-        <ContactSection />
-        <Footer />
-      </div>
+function LoadingScreen() {
+  return <div className="h-screen w-full bg-[#030907]" />;
+}
 
-      {/* Chatbot */}
-      <Chatbot />
-    </div>
-  );
-};
+function ExperienceRouteProxy() {
+  return null;
+}
 
 // This is the main App component that handles all routing.
 function App() {
+  //const { pathname } = useLocation();
   return (
     <div className="App">
       <BrowserRouter>
         <Routes>
           {/* Main Portfolio Route */}
-          <Route path="/" element={<Portfolio />} />
+          <Route element={<Home />}>
+            <Route path="/" element={<Navigate to="/portfolio" replace />} />
+            
+
+            <Route path="/portfolio" element={<PortfolioLayout />}>
+              {/* The default page shown at "/portfolio" will be the hero section */}
+              <Route
+                index
+                element={<ExperienceRouteProxy />}
+              />
+              <Route
+                path="about"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <AboutSection />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="projects"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <ProjectsSection />
+                  </Suspense>
+                }
+              />
+              <Route path="skills" element={<ExperienceRouteProxy />} />
+              <Route
+                path="education"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <EducationSection />
+                  </Suspense>
+                }
+              />
+              <Route path="experience" element={<ExperienceRouteProxy />} />
+              <Route
+                path="learning-journey"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <LearningJourneySection />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="experiments"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <ExperimentsSection />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="contact"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <ContactSection />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="footer"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <Footer />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="test"
+                element={
+                  <Suspense fallback={<LoadingScreen />}>
+                    <Test />
+                  </Suspense>
+                }
+              />
+
+              {/* We will add more routes for Skills, Contact, etc. later */}
+            </Route>
+          </Route>
 
           {/* Admin Login Route (Public) */}
           <Route path="/admin/login" element={<Login />} />

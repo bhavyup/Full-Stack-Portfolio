@@ -4,6 +4,9 @@ module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/index.html"],
   theme: {
     extend: {
+      backgroundImage: {
+        "radial-gradient": "radial-gradient(circle, var(--tw-gradient-stops))",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -81,6 +84,14 @@ module.exports = {
           "50%": { backgroundPosition: "100% 50%" },
           "100%": { backgroundPosition: "0% 50%" },
         },
+        jitter: {
+          '0%': { transform: 'translateX(0) skewX(0deg)' },
+          '20%': { transform: 'translateX(-1px) skewX(-0.5deg)' },
+          '40%': { transform: 'translateX(1px) skewX(0.5deg)' },
+          '60%': { transform: 'translateX(-0.5px) skewX(-0.25deg)' },
+          '80%': { transform: 'translateX(0.5px) skewX(0.25deg)' },
+          '100%': { transform: 'translateX(0) skewX(0deg)' },
+        }
         // --- END OF FIX ---
       }, // <-- THE MISSING COMMA WAS HERE
 
@@ -88,7 +99,8 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shine: "shine 5s linear infinite",
-        gradient: "gradient 15s ease infinite", // Adjusted timing for a smoother effect
+        gradient: "gradient 15s ease infinite",
+        jitter: "jitter 420ms linear 1", // Adjusted timing for a smoother effect
       },
     },
   },

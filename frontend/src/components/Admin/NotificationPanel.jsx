@@ -23,6 +23,8 @@ const notificationConfig = {
   success: { icon: SquareCheckBig, color: "text-green-400" },
   error: { icon: ShieldBan, color: "text-red-600" },
   info: { icon: InfoIcon, color: "text-slate-400" },
+  create: { icon: UserPlus, color: "text-green-400" },
+  delete: { icon: Trash2, color: "text-red-400" },
   default: { icon: Bell, color: "text-slate-400" },
 };
 

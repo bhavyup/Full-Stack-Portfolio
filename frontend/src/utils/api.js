@@ -58,6 +58,11 @@ export const publicApi = {
     return response.data;
   },
 
+  getProjectsPage: async () => {
+    const response = await api.get("/projects/content");
+    return response.data;
+  },
+
   // Projects
   getProjects: async () => {
     const response = await api.get("/projects");
@@ -218,6 +223,11 @@ export const adminApi = {
     return response.data;
   },
 
+  updateProjectsPage: async (contentData) => {
+    const response = await api.put("/admin/projects/content", contentData);
+    return response.data;
+  },
+
   // Projects Management
   createProject: async (projectData) => {
     const response = await api.post("/admin/projects", projectData);
@@ -235,14 +245,32 @@ export const adminApi = {
   },
 
   // Education Management
-  updateEducation: async (educationData) => {
-    const response = await api.put("/admin/education", educationData);
+  createEducation: async (educationData) => {
+    const response = await api.post("/admin/education", educationData);
+    return response.data;
+  },
+  updateEducation: async (educationId, educationData) => {
+    const response = await api.put(
+      `/admin/education/${educationId}`,
+      educationData
+    );
+    return response.data;
+  },
+  deleteEducation: async (educationId) => {
+    const response = await api.delete(`/admin/education/${educationId}`);
     return response.data;
   },
 
-  // Experience Management
-  updateExperience: async (experienceData) => {
-    const response = await api.put("/admin/experience", experienceData);
+ createExperience: async (experienceData) => {
+    const response = await api.post("/admin/experience", experienceData);
+    return response.data;
+  },
+  updateExperience: async (experienceId, experienceData) => {
+    const response = await api.put(`/admin/experience/${experienceId}`, experienceData);
+    return response.data;
+  },
+  deleteExperience: async (experienceId) => {
+    const response = await api.delete(`/admin/experience/${experienceId}`);
     return response.data;
   },
 

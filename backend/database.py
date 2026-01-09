@@ -19,6 +19,7 @@ db = client[os.environ["DB_NAME"]]
 profile_collection = db.profile
 skills_collection = db.skills
 projects_collection = db.projects
+projects_page_collection = db.projects_page
 education_collection = db.education
 experience_collection = db.experience
 learning_journey_collection = db.learning_journey
@@ -42,23 +43,23 @@ class Database:
             # MongoDB will automatically delete any document 30 days after its 'createdAt' time.
             # 2592000 seconds = 30 days
             await notifications_collection.create_index(
-                [("createdAt", ASCENDING)], 
+                [("createdAt", ASCENDING)],
                 expireAfterSeconds=864000
             )
             logger.info("TTL index for notifications created successfully.")
         except Exception as e:
             logger.error(f"Error creating TTL index: {e}")
-    
+
     @staticmethod
     async def search_content(query: str):
         """Search for a query across all major portfolio content."""
         try:
             search_regex = {"$regex": query, "$options": "i"}
-            
+
             profile_task = profile_collection.find_one({
                 "$or": [{"name": search_regex}, {"headline": search_regex}, {"bio": search_regex}, {"highlights": search_regex}, {"location": search_regex}, {"email": search_regex}, {"linkedin": search_regex}]
             })
-            
+
             projects_task = projects_collection.find({
                 "$or": [
                     {"title": search_regex},
@@ -69,51 +70,62 @@ class Database:
                     {"githubUrl": search_regex}  # <-- ADDED
                 ]
             }).to_list(length=None)
-            
+
             skills_task = skills_collection.find({
                 "$or": [{"category": search_regex}, {"skills.name": search_regex}]
             }).to_list(length=None)
-            
+
             education_task = education_collection.find_one({
-            "$or": [{"degree": search_regex}, {"institution": search_regex}, {"year": search_regex}]
+                "$or": [{"degree": search_regex}, {"institution": search_regex}, {"year": search_regex}]
             })
-            
+
             experience_task = experience_collection.find_one({
                 "$or": [{"main_title": search_regex}, {"main_message": search_regex}, {"goals.title": search_regex}, {"goals.description": search_regex}, {"cta_title": search_regex}, {"cta_message": search_regex}]
             })
-            
+
             learning_journey_task = learning_journey_collection.find({
                 "$or": [{"phase": search_regex}, {"skills": search_regex}, {"status": search_regex}]
             }).to_list(length=None)
-            
+
             growth_mindset_task = growth_mindset_collection.find_one({
-            "$or": [{"title": search_regex}, {"quote": search_regex}]
-           })
-            
+                "$or": [{"title": search_regex}, {"quote": search_regex}]
+            })
+
             experiments_task = experiments_collection.find_one({
                 "$or": [
-                    {"header_title": search_regex}, {"header_description": search_regex},
-                    {"lab_title": search_regex}, {"lab_description": search_regex},
-                    {"lab_features.title": search_regex}, {"lab_features.description": search_regex},
-                    {"experiments.title": search_regex}, {"experiments.description": search_regex},
+                    {"header_title": search_regex}, {
+                        "header_description": search_regex},
+                    {"lab_title": search_regex}, {
+                        "lab_description": search_regex},
+                    {"lab_features.title": search_regex}, {
+                        "lab_features.description": search_regex},
+                    {"experiments.title": search_regex}, {
+                        "experiments.description": search_regex},
                     {"experiments.status": search_regex}
                 ]
             })
-            
+
             contacts_task = contact_section_collection.find_one({
                 "$or": [
-                    {"header_title": search_regex}, {"header_description": search_regex},
-                    {"connect_title": search_regex}, {"connect_description": search_regex},
-                    {"get_in_touch_title": search_regex}, {"get_in_touch_description": search_regex},
-                    {"contact_links.name": search_regex}, {"contact_links.value": search_regex}, {"contact_links.icon": search_regex},
+                    {"header_title": search_regex}, {
+                        "header_description": search_regex},
+                    {"connect_title": search_regex}, {
+                        "connect_description": search_regex},
+                    {"get_in_touch_title": search_regex}, {
+                        "get_in_touch_description": search_regex},
+                    {"contact_links.name": search_regex}, {"contact_links.value": search_regex}, {
+                        "contact_links.icon": search_regex},
                 ]
             })
-            
+
             footer_task = footer_collection.find_one({
                 "$or": [
-                    {"brand_name": search_regex}, {"brand_description": search_regex},
-                    {"quick_links.name": search_regex}, {"quick_links.href": search_regex},
-                    {"connect_title": search_regex}, {"connect_description": search_regex},
+                    {"brand_name": search_regex}, {
+                        "brand_description": search_regex},
+                    {"quick_links.name": search_regex}, {
+                        "quick_links.href": search_regex},
+                    {"connect_title": search_regex}, {
+                        "connect_description": search_regex},
                     {"bottom_text": search_regex}
                 ]
             })
@@ -122,55 +134,68 @@ class Database:
             profile_match, projects_docs, skills_docs, education_match, experience_match, learning_journey_docs, growth_mindset_match, experiments_match, contact_section_match, footer_match = await asyncio.gather(
                 profile_task, projects_task, skills_task, education_task, experience_task, learning_journey_task, growth_mindset_task, experiments_task, contacts_task, footer_task
             )
-            
+
             # Process results
-            results = { "profile": [], "projects": [], "skills": [], "education": [], "experience": [], "learning_journey": [], "growth_mindset": [], "experiments": [], "contact": [], "footer": [] }
-            
+            results = {"profile": [], "projects": [], "skills": [], "education": [], "experience": [
+            ], "learning_journey": [], "growth_mindset": [], "experiments": [], "contact": [], "footer": []}
+
             # --- NEW: PROCESS FOOTER SECTION ---
             if footer_match:
-                fields_to_check = ["brand_name", "brand_description", "connect_title", "connect_description", "bottom_text"]
+                fields_to_check = ["brand_name", "brand_description",
+                                   "connect_title", "connect_description", "bottom_text"]
                 for field in fields_to_check:
                     value = footer_match.get(field)
                     if isinstance(value, str) and query.lower() in value.lower():
-                        results["footer"].append({"field": field.replace('_', ' ').capitalize(), "value": value})
-                
+                        results["footer"].append(
+                            {"field": field.replace('_', ' ').capitalize(), "value": value})
+
                 for link in footer_match.get("quick_links", []):
                     if query.lower() in link.get("name", "").lower() or query.lower() in link.get("href", "").lower():
-                        results["footer"].append({"field": f"Quick Link: {link.get('name')}", "value": link.get('href')})
-            
+                        results["footer"].append(
+                            {"field": f"Quick Link: {link.get('name')}", "value": link.get('href')})
+
             if contact_section_match:
-                fields_to_check = ["header_title", "header_description", "connect_title", "connect_description", "get_in_touch_title", "get_in_touch_description"]
+                fields_to_check = ["header_title", "header_description", "connect_title",
+                                   "connect_description", "get_in_touch_title", "get_in_touch_description"]
                 for field in fields_to_check:
                     value = contact_section_match.get(field)
                     if isinstance(value, str) and query.lower() in value.lower():
-                        results["contact"].append({"field": field.replace('_', ' ').capitalize(), "value": value})
-                
+                        results["contact"].append(
+                            {"field": field.replace('_', ' ').capitalize(), "value": value})
+
                 for link in contact_section_match.get("contact_links", []):
                     if query.lower() in link.get("name", "").lower() or query.lower() in link.get("value", "").lower() or query.lower() in link.get("icon", "").lower():
-                        results["contact"].append({"field": f"Contact Link: {link.get('name')}", "value": link.get('value'), "icon": link.get('icon')})
+                        results["contact"].append({"field": f"Contact Link: {link.get('name')}", "value": link.get(
+                            'value'), "icon": link.get('icon')})
 
             if experiments_match:
-                fields_to_check = ["header_title", "header_description", "lab_title", "lab_description"]
+                fields_to_check = [
+                    "header_title", "header_description", "lab_title", "lab_description"]
                 for field in fields_to_check:
                     value = experiments_match.get(field)
                     if isinstance(value, str) and query.lower() in value.lower():
-                        results["experiments"].append({"field": field.replace('_', ' ').capitalize(), "value": value})
-                
+                        results["experiments"].append(
+                            {"field": field.replace('_', ' ').capitalize(), "value": value})
+
                 for feature in experiments_match.get("lab_features", []):
                     if query.lower() in feature.get("title", "").lower() or query.lower() in feature.get("description", "").lower():
-                        results["experiments"].append({"field": f"Lab Feature: {feature.get('title')}", "value": feature.get('description')})
-                
+                        results["experiments"].append(
+                            {"field": f"Lab Feature: {feature.get('title')}", "value": feature.get('description')})
+
                 for experiment in experiments_match.get("experiments", []):
                     if query.lower() in experiment.get("title", "").lower() or query.lower() in experiment.get("description", "").lower() or query.lower() in experiment.get("status", "").lower():
-                        results["experiments"].append({"field": f"Experiment: {experiment.get('title')}", "value": experiment.get('description')})
-            
+                        results["experiments"].append(
+                            {"field": f"Experiment: {experiment.get('title')}", "value": experiment.get('description')})
+
             if profile_match:
-                fields_to_check = ["name", "headline", "bio", "highlights", "location", "email", "linkedin"]
+                fields_to_check = ["name", "headline", "bio",
+                                   "highlights", "location", "email", "linkedin"]
                 for field in fields_to_check:
                     value = profile_match.get(field)
                     if isinstance(value, str) and query.lower() in value.lower():
                         results["profile"].append({
-                            "field": field.replace('_', ' ').capitalize(), # e.g., "Resume url"
+                            # e.g., "Resume url"
+                            "field": field.replace('_', ' ').capitalize(),
                             "value": value
                         })
 
@@ -186,7 +211,7 @@ class Database:
 
             if experience_match:
                 fields_to_check = ["main_title",
-                                "main_message", "cta_title", "cta_message"]
+                                   "main_message", "cta_title", "cta_message"]
                 for field in fields_to_check:
                     value = experience_match.get(field)
                     if isinstance(value, str) and query.lower() in value.lower():
@@ -218,10 +243,12 @@ class Database:
                 if query.lower() in project.get("description", "").lower():
                     matches_in_project.append("Match in description")
                 if query.lower() in project.get("status", "").lower():
-                    matches_in_project.append(f"Match in status: '{project.get('status')}'")
+                    matches_in_project.append(
+                        f"Match in status: '{project.get('status')}'")
                 for tech in project.get("technologies", []):
                     if query.lower() in tech.lower():
-                        matches_in_project.append(f"Match in technology: '{tech}'")
+                        matches_in_project.append(
+                            f"Match in technology: '{tech}'")
                 if project.get("liveUrl") and query.lower() in project.get("liveUrl", "").lower():
                     matches_in_project.append("Match in Live URL")
                 if project.get("githubUrl") and query.lower() in project.get("githubUrl", "").lower():
@@ -233,11 +260,11 @@ class Database:
                         "matches": matches_in_project
                     })
                     seen_projects.add(project_id)
-            
+
             results["projects"] = project_results
-                
+
             skill_results = []
-            seen_skills = set() 
+            seen_skills = set()
             for s_doc in skills_docs:
                 category = s_doc.get("category", "Unknown")
                 if query.lower() in category.lower():
@@ -261,7 +288,7 @@ class Database:
                             })
                             seen_skills.add(skill_match_id)
             results["skills"] = skill_results
-            
+
             if learning_journey_docs:
                 for phase in learning_journey_docs:
                     results["learning_journey"].append({
@@ -271,18 +298,17 @@ class Database:
 
             if growth_mindset_match:
                 if query.lower() in growth_mindset_match.get("title", "").lower():
-                    results["growth_mindset"].append({ "field": "Title", "value": growth_mindset_match.get("title") })
+                    results["growth_mindset"].append(
+                        {"field": "Title", "value": growth_mindset_match.get("title")})
                 if query.lower() in growth_mindset_match.get("quote", "").lower():
-                    results["growth_mindset"].append({ "field": "Quote", "value": growth_mindset_match.get("quote") })
-                    
-            
-            
+                    results["growth_mindset"].append(
+                        {"field": "Quote", "value": growth_mindset_match.get("quote")})
+
             return results
         except Exception as e:
             logger.error(f"Error during content search: {e}")
             return {"profile": [], "projects": [], "skills": [], "education": [], "experience": []}
 
-    
     @staticmethod
     async def get_profile():
         """Get profile data"""
@@ -346,6 +372,30 @@ class Database:
             return False
 
     @staticmethod
+    async def get_projects_page():
+        try:
+            # Find the single document by its fixed ID
+            content = await projects_page_collection.find_one({"_id": "projects_page_main"})
+            return content
+        except Exception as e:
+            logger.error(f"Error getting projects page content: {e}")
+            return None
+
+    @staticmethod
+    async def update_projects_page(data: dict):
+        try:
+            # Use update_one with $set for safe partial updates from the admin panel
+            result = await projects_page_collection.update_one(
+                {"_id": "projects_page_main"},
+                {"$set": data},
+                upsert=True
+            )
+            return result.acknowledged
+        except Exception as e:
+            logger.error(f"Error updating projects page content: {e}")
+            return False
+
+    @staticmethod
     async def get_projects():
         """Get all projects"""
         try:
@@ -397,53 +447,97 @@ class Database:
             return False
 
     @staticmethod
-    async def get_education():
-        """Get education data"""
+    async def get_all_education():
         try:
-            education = await education_collection.find_one()
-            if education:
-                education["id"] = str(education["_id"])
-                del education["_id"]
-            return education
+            cursor = education_collection.find().sort(
+                "year", -1)  # Sort descending by year
+            education_list = []
+            async for edu in cursor:
+                edu["id"] = str(edu["_id"])
+                del edu["_id"]
+                education_list.append(edu)
+            return education_list
         except Exception as e:
-            logger.error(f"Error getting education: {e}")
+            logger.error(f"Error getting education list: {e}")
+            return []
+
+    @staticmethod
+    async def create_education(education_data: dict):
+        """Create a new education entry."""
+        try:
+            result = await education_collection.insert_one(education_data)
+            return str(result.inserted_id)
+        except Exception as e:
+            logger.error(f"Error creating education entry: {e}")
             return None
 
     @staticmethod
-    async def update_education(education_data: dict):
-        """Update education data"""
+    async def update_education(education_id: str, education_data: dict):
+        """Update an education entry by its ID."""
         try:
-            result = await education_collection.replace_one(
-                {}, education_data, upsert=True
+            result = await education_collection.update_one(
+                {"_id": ObjectId(education_id)}, {"$set": education_data}
             )
             return result.acknowledged
         except Exception as e:
-            logger.error(f"Error updating education: {e}")
+            logger.error(f"Error updating education {education_id}: {e}")
             return False
 
     @staticmethod
-    async def get_experience():
-        """Get experience data"""
+    async def delete_education(education_id: str):
+        """Delete an education entry by its ID."""
         try:
-            experience = await experience_collection.find_one()
-            if experience:
-                experience["id"] = str(experience["_id"])
-                del experience["_id"]
-            return experience
+            result = await education_collection.delete_one({"_id": ObjectId(education_id)})
+            return result.deleted_count > 0
         except Exception as e:
-            logger.error(f"Error getting experience: {e}")
+            logger.error(f"Error deleting education {education_id}: {e}")
+            return False
+
+    @staticmethod
+    async def get_all_experience():
+        """Get all experience entries, sorted by start date."""
+        try:
+            cursor = experience_collection.find().sort("start", -1)  # Sort newest first
+            experience_list = []
+            async for exp in cursor:
+                exp["id"] = str(exp["_id"])
+                del exp["_id"]
+                experience_list.append(exp)
+            return experience_list
+        except Exception as e:
+            logger.error(f"Error getting experience list: {e}")
+            return []
+
+    @staticmethod
+    async def create_experience(experience_data: dict):
+        """Create a new experience entry."""
+        try:
+            result = await experience_collection.insert_one(experience_data)
+            return str(result.inserted_id)
+        except Exception as e:
+            logger.error(f"Error creating experience entry: {e}")
             return None
 
     @staticmethod
-    async def update_experience(experience_data: dict):
-        """Update experience data"""
+    async def update_experience(experience_id: str, experience_data: dict):
+        """Update an experience entry by its ID."""
         try:
-            result = await experience_collection.replace_one(
-                {}, experience_data, upsert=True
+            result = await experience_collection.update_one(
+                {"_id": ObjectId(experience_id)}, {"$set": experience_data}
             )
             return result.acknowledged
         except Exception as e:
-            logger.error(f"Error updating experience: {e}")
+            logger.error(f"Error updating experience {experience_id}: {e}")
+            return False
+
+    @staticmethod
+    async def delete_experience(experience_id: str):
+        """Delete an experience entry by its ID."""
+        try:
+            result = await experience_collection.delete_one({"_id": ObjectId(experience_id)})
+            return result.deleted_count > 0
+        except Exception as e:
+            logger.error(f"Error deleting experience {experience_id}: {e}")
             return False
 
     @staticmethod
@@ -643,7 +737,7 @@ class Database:
         except Exception as e:
             logger.error(f"Error updating footer data: {e}")
             return False
-        
+
     @staticmethod
     async def create_notification(notification_data: dict):
         """Creates a new notification document"""
@@ -664,7 +758,7 @@ class Database:
             del doc["_id"]
             notifications.append(doc)
         return notifications
-    
+
     @staticmethod
     async def mark_notification_as_read(notification_id: str):
         """Marks a single notification as read by its ID."""
@@ -677,21 +771,21 @@ class Database:
             )
             return result.modified_count > 0
         except Exception as e:
-            logger.error(f"Error marking notification {notification_id} as read: {e}")
+            logger.error(
+                f"Error marking notification {notification_id} as read: {e}")
             return False
 
-    
     @staticmethod
     async def mark_notifications_as_read():
         """Marks all unread notifications as read"""
         # Change the filter from {"read": False} to {"read": {"$ne": True}}
         # This finds documents where 'read' is false OR where the 'read' field doesn't exist at all.
         await notifications_collection.update_many(
-            {"read": {"$ne": True}}, 
+            {"read": {"$ne": True}},
             {"$set": {"read": True}}
         )
         return True
-    
+
     @staticmethod
     async def delete_all_notifications():
         """Deletes all notifications from the collection."""
@@ -701,8 +795,6 @@ class Database:
         except Exception as e:
             logger.error(f"Error deleting all notifications: {e}")
             return False
-    
-    
 
     @staticmethod
     async def get_admin_by_username(username: str):
@@ -716,12 +808,13 @@ class Database:
         except Exception as e:
             logger.error(f"Error getting admin: {e}")
             return None
-        
+
     @staticmethod
     async def get_admins():
         """Get all admin users, excluding their passwords"""
         try:
-            cursor = admin_collection.find({}, {"password": 0}) # {"password": 0} excludes the password field
+            # {"password": 0} excludes the password field
+            cursor = admin_collection.find({}, {"password": 0})
             admins = []
             async for admin in cursor:
                 admin["id"] = str(admin["_id"])
@@ -741,7 +834,7 @@ class Database:
         except Exception as e:
             logger.error(f"Error creating admin: {e}")
             return None
-        
+
     @staticmethod
     async def delete_admin(username: str):
         """Deletes an admin by username"""
