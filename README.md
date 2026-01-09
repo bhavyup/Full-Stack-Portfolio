@@ -1,4 +1,4 @@
-# 🌟 Shreeya's Portfolio
+# 🌟 Bhavy's Portfolio
 
 A modern, dynamic full-stack portfolio website featuring a cyberpunk-themed UI with an admin dashboard for real-time content management. Built with React, FastAPI, and MongoDB.
 
@@ -309,7 +309,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👤 Author
 
-**Shreeya/Bhavy**
+**Bhavy**
 - GitHub: [@yourusername](https://github.com/yourusername)
 - LinkedIn: [Your Profile](https://linkedin.com/in/yourprofile)
 
@@ -326,4 +326,4 @@ For support, email your-email@example.com or open an issue in the repository.
 
 ---
 
-**Made with ❤️ by Shreeya**
+**Made with ❤️ by Bhavy**
